@@ -18,6 +18,8 @@
 //	return 0;
 //}
 /*===============================
+ * citem <item id>;
+ * citem <"item name">;
  *===============================*/
 BUILDIN_FUNC(citem)
 {
