@@ -21,7 +21,8 @@
 // see conf/battle/client.conf for other version
 
 #ifndef PACKETVER
-	#define PACKETVER 20101124
+	//#define PACKETVER 20130807//roBrowser
+	#define PACKETVER 20151104//Dorams
 	//#define PACKETVER 20120410
 #endif
 
@@ -453,7 +454,9 @@ struct s_battleground_stats {
 		cq_wins, cq_lost,
 		// Rush
 		ru_captures,
-		ru_wins, ru_lost;
+		ru_wins, ru_lost,
+		// Chest
+		ch_wins, ch_lost, ch_tie;
 
 	unsigned int // Ammo
 		sp_heal_potions,

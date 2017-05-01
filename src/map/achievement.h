@@ -70,6 +70,8 @@ enum AchievementType_BG {
 // Rush
 	ATB_RU_CAPTURE,
 	ATB_RU_VICTORY,
+// Chest
+	ATB_CH_VICTORY,
 };
 
 enum AchievementType {

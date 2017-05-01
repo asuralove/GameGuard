@@ -301,8 +301,12 @@ static int logclif_parse_reqauth(int fd, struct login_session_data *sd, int comm
 		if(command == 0x0825) {
 			char *accname = (char *)RFIFOP(fd, 9);
 			char *token = (char *)RFIFOP(fd, 0x5C);
+			char *mac = {(char *)RFIFOP(fd, 60)};
 			size_t uAccLen = strlen(accname);
+			size_t uMac = 18;
 			size_t uTokenLen = RFIFOREST(fd) - 0x5C;
+			safestrncpy(mac,mac, uMac);
+			safestrncpy(sd->mac_address,mac, uMac);
 
 			version = RFIFOL(fd,4);
 

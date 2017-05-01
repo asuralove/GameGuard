@@ -749,7 +749,7 @@ void bg_team_get_kafrapoints(int bg_id, int amount)
 }
 
 /* ==============================================================
-   bg_arena (0 EoS | 1 Boss | 2 TI | 3 CTF | 4 TD | 5 SC | 6 CON | 7 RUSH | 8 DOM)
+   bg_arena (0 EoS | 1 Boss | 2 TI | 3 CTF | 4 TD | 5 SC | 6 CON | 7 RUSH | 8 DOM | 9 CH)
    bg_result (0 Won | 1 Tie | 2 Lost)
    ============================================================== */
 void bg_team_rewards(int bg_id, int nameid, int amount, int kafrapoints, int quest_id, const char *var, int add_value, int bg_arena, int bg_result)
@@ -869,6 +869,10 @@ void bg_team_rewards(int bg_id, int nameid, int amount, int kafrapoints, int que
 				add2limit(sd->status.bgstats.dom_wins,1,USHRT_MAX);
 				achievement_validate_bg(sd,ATB_DOM_VICTORY,1);
 				break;
+			case 9:
+				add2limit(sd->status.bgstats.ch_wins,1,USHRT_MAX);
+				achievement_validate_bg(sd,ATB_CH_VICTORY,1);
+				break;
 			}
 			break;
 		case 1: // Tie
@@ -890,6 +894,8 @@ void bg_team_rewards(int bg_id, int nameid, int amount, int kafrapoints, int que
 			case 5: add2limit(sd->status.bgstats.sc_tie,1,USHRT_MAX); break;
 			// No Tie for Conquest or Rush
 			case 8: add2limit(sd->status.bgstats.dom_tie,1,USHRT_MAX); break;
+			case 9: add2limit(sd->status.bgstats.ch_tie,1,USHRT_MAX); break;
+
 			}
 			break;
 		case 2: // Lost
@@ -913,6 +919,7 @@ void bg_team_rewards(int bg_id, int nameid, int amount, int kafrapoints, int que
 			case 6: add2limit(sd->status.bgstats.cq_lost,1,USHRT_MAX); break;
 			case 7: add2limit(sd->status.bgstats.ru_lost,1,USHRT_MAX); break;
 			case 8: add2limit(sd->status.bgstats.dom_lost,1,USHRT_MAX); break;
+			case 9: add2limit(sd->status.bgstats.ch_lost,1,USHRT_MAX); break;
 			}
 			break;
 		}

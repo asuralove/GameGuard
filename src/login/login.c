@@ -395,6 +395,7 @@ int login_mmo_auth(struct login_session_data* sd, bool isServer) {
 	safestrncpy(sd->lastlogin, acc.lastlogin, sizeof(sd->lastlogin));
 	sd->sex = acc.sex;
 	sd->group_id = acc.group_id;
+	memcpy(acc.mac_address, sd->mac_address, sizeof(acc.mac_address));
 
 	// update account data
 	timestamp2string(acc.lastlogin, sizeof(acc.lastlogin), time(NULL), "%Y-%m-%d %H:%M:%S");
