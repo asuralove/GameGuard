@@ -15,6 +15,7 @@
 #include "../common/utils.h"
 #include "../common/md5calc.h"
 #include "../common/random.h"
+#include "../common/hamster.h"
 #include "account.h"
 #include "ipban.h" //ipban_check
 #include "login.h"
@@ -108,7 +109,7 @@ static void logclif_auth_ok(struct login_session_data* sd) {
 		}
 	}
 
-	login_log(ip, sd->userid, 100, "login ok");
+	login_log(ip, sd->userid, 100, "login ok", sd->mac_address);
 	ShowStatus("Connection of the account '%s' accepted.\n", sd->userid);
 
 	WFIFOHEAD(fd,47+32*server_num);
@@ -187,15 +188,15 @@ static void logclif_auth_failed(struct login_session_data* sd, int result) {
 	int fd = sd->fd;
 	uint32 ip = session[fd]->client_addr;
 
-	if (login_config.log_login)
-	{
-		if(result >= 0 && result <= 15)
-		    login_log(ip, sd->userid, result, msg_txt(result));
-		else if(result >= 99 && result <= 104)
-		    login_log(ip, sd->userid, result, msg_txt(result-83)); //-83 offset
-		else
-		    login_log(ip, sd->userid, result, msg_txt(22)); //unknow error
-	}
+ 	if (login_config.log_login)
+ 	{
+ 		if(result >= 0 && result <= 15)
+		    login_log(ip, sd->userid, result, msg_txt(result), sd->mac_address);
+ 		else if(result >= 99 && result <= 104)
+		    login_log(ip, sd->userid, result, msg_txt(result-83), sd->mac_address); //-83 offset
+ 		else
+		    login_log(ip, sd->userid, result, msg_txt(22), sd->mac_address); //unknow error
+ 	}
 
 	if( (result == 0 || result == 1) && login_config.dynamic_pass_failure_ban )
 		ipban_log(ip); // log failed password attempt
@@ -428,7 +429,7 @@ static int logclif_parse_reqcharconnec(int fd, struct login_session_data *sd, ch
 
 		ShowInfo("Connection request of the char-server '%s' @ %u.%u.%u.%u:%u (account: '%s', pass: '%s', ip: '%s')\n", server_name, CONVIP(server_ip), server_port, sd->userid, sd->passwd, ip);
 		sprintf(message, "charserver - %s@%u.%u.%u.%u:%u", server_name, CONVIP(server_ip), server_port);
-		login_log(session[fd]->client_addr, sd->userid, 100, message);
+		login_log(session[fd]->client_addr, sd->userid, 100, message, "");
 
 		result = login_mmo_auth(sd, true);
 		if( runflag == LOGINSERVER_ST_RUNNING &&
@@ -468,6 +469,29 @@ static int logclif_parse_reqcharconnec(int fd, struct login_session_data *sd, ch
 	return 1;
 }
 
+int logclif_parse_hamstermac(int fd, struct login_session_data *sd) {
+	int result = hamster_funcs->login_process_auth(fd, RFIFOP(fd, 0), RFIFOREST(fd), sd->userid, sd->passwd, &sd->version);
+	RFIFOSKIP(fd, RFIFOREST(fd));
+	
+	hamster_funcs->login_get_mac_address(fd, sd->mac_address);
+	
+	if( login_config.use_md5_passwds )
+		MD5_String(sd->passwd, sd->passwd);
+	
+	if (result > 0) {
+		logclif_auth_failed(sd, result);
+	} else if (result == 0) {
+		return 0;
+	} else {
+		result = login_mmo_auth(sd, false);
+		if (result == -1)
+			logclif_auth_ok(sd);
+		else
+			logclif_auth_failed(sd, result);
+	}
+	return 1;
+}
+
 /**
  * Entry point from client to log-server.
  * Function that checks incoming command, then splits it to the correct handler.
@@ -494,7 +518,7 @@ int logclif_parse(int fd) {
 		if( login_config.ipban && ipban_check(ipl) )
 		{
 			ShowStatus("Connection refused: IP isn't authorised (deny/allow, ip: %s).\n", ip);
-			login_log(ipl, "unknown", -3, "ip banned");
+			login_log(ipl, "unknown", -3, "ip banned", "");
 			WFIFOHEAD(fd,23);
 			WFIFOW(fd,0) = 0x6a;
 			WFIFOB(fd,2) = 3; // 3 = Rejected from Server
@@ -515,6 +539,12 @@ int logclif_parse(int fd) {
 
 		switch( command )
 		{
+		// MAC Adress
+		case 0x254:
+		case 0x255:
+		case 0x256:
+			logclif_parse_hamstermac(fd, sd);
+			break;
 		// New alive packet: used to verify if client is always alive.
 		case 0x0200: next = logclif_parse_keepalive(fd); break;
 		// client md5 hash (binary)

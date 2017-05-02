@@ -78,6 +78,8 @@ struct socket_data
 		unsigned char server : 1;
 		unsigned char ping : 2;
 	} flag;
+	
+	void *hamster_sd;
 
 	uint32 client_addr; // remote client address
 

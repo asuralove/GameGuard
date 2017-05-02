@@ -29,7 +29,7 @@ unsigned long loginlog_failedattempts(uint32 ip, unsigned int minutes);
  * @param rcode:
  * @param message:
  */
-void login_log(uint32 ip, const char* username, int rcode, const char* message);
+void login_log(uint32 ip, const char* username, int rcode, const char* message, const char* mac);
 
 /**
  * Read configuration options.

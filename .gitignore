@@ -27,3 +27,7 @@
 *.exe
 *.out
 *.app
+src/char/Makefile
+src/common/Makefile
+src/login/Makefile
+src/map/Makefile

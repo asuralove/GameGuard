@@ -13,6 +13,7 @@
 #include "../common/strlib.h"
 #include "../common/utils.h"
 #include "../common/conf.h"
+#include "../common/hamster.h"
 
 #include "map.h"
 #include "atcommand.h"
@@ -149,6 +150,217 @@ static const char* atcommand_help_string(const char* command)
 	return str;
 }
 
+#ifndef WIN32
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
+#endif
+
+#if defined(HCHSYS_NAME_LENGTH)
+	void clif_displaymessage(const int fd, const char* mes);
+#endif
+
+#if !defined(ACMD_FUNC) && defined(HAMSTER_HERCULES)
+	#define ACMD_FUNC ACMD
+#endif
+
+#ifdef HAMSTER_OLD_SERVER
+	#define SqlStmt_Malloc                SQL->StmtMalloc
+	#define SqlStmt_Prepare               SQL->StmtPrepare
+	#define SqlStmt_BindParam             SQL->StmtBindParam
+	#define SqlStmt_BindColumn            SQL->StmtBindColumn
+	#define SqlStmt_Execute               SQL->StmtExecute
+	#define SqlStmt_Free                  SQL->StmtFree
+	#define Sql_EscapeStringLen           SQL->EscapeStringLen
+	#define SqlStmt_NextRow               SQL->StmtNextRow
+	#define Sql_QueryStr                  SQL->QueryStr
+	#define Sql_Query                     SQL->Query
+	#define Sql_NumRows                   SQL->NumRows
+#endif
+
+
+ACMD_FUNC(reloadint) {
+	hamster_funcs->zone_grf_reload();
+	clif_displaymessage(fd, "Integrity reloaded.");
+	return 0;
+}
+
+ACMD_FUNC(reloadhamster) {
+	hamster_funcs->zone_reload();
+	clif_displaymessage(fd, "HamsterGuard configuration loaded.");
+	return 0;
+}
+
+ACMD_FUNC(showautoban) {
+	hamster_funcs->zone_autoban_show(fd);
+	return 0;
+}
+
+ACMD_FUNC(liftautoban) {
+	uint32 ip;
+
+	if (!message || !*message) {
+	__usage:
+		clif_displaymessage(fd, "Usage:");
+		clif_displaymessage(fd, "	@liftautoban <IP address> / all");
+		return -1;
+	}
+	
+	if ( (ip=inet_addr(message)) != INADDR_NONE)
+		ip = htonl(ip);
+	else if (stricmp(message, "all") == 0)
+		ip = 0;
+	else
+		goto __usage;
+
+	hamster_funcs->zone_autoban_lift(ip);
+
+	if (ip != 0) {
+		sprintf(atcmd_output, "Unblocked %u.%u.%u.%u.", CONVIP(ip));
+		clif_displaymessage(fd, atcmd_output);
+	} else {
+		clif_displaymessage(fd, "Removed all autoban entries.");
+	}
+
+	return 0;	
+}
+
+/*==========================================
+ * Network Information
+ *------------------------------------------*/
+ACMD_FUNC(netinfo)
+{
+	uint32 ip;
+	int8 mac_address[20];
+
+	nullpo_retr(-1,sd);
+	sprintf(atcmd_output, "Network Information Request for %s (AID %d | CID %d)", sd->status.name, sd->status.account_id, sd->status.char_id);
+	clif_displaymessage(fd,atcmd_output);
+	hamster_funcs->zone_get_mac_address(sd->fd, mac_address);
+	sprintf(atcmd_output, "- Mac Address : %s", mac_address);
+	clif_displaymessage(fd,atcmd_output);
+
+	ip = session[sd->fd]->client_addr;
+	sprintf(atcmd_output, "- IP Address : %d.%d.%d.%d", CONVIP(ip));
+	clif_displaymessage(fd,atcmd_output);
+
+	return 0;
+}
+
+/*==========================================
+ * Mac Address Ban
+ *------------------------------------------*/
+ACMD_FUNC(showmacban)
+{
+	SqlStmt* stmt = SqlStmt_Malloc(mmysql_handle);
+	char mac_address[20];
+	char comment[90];
+
+	if (SQL_SUCCESS != SqlStmt_Prepare(stmt, "SELECT `mac`, `comment` FROM mac_bans ORDER BY `mac` DESC LIMIT 100") ||
+		SQL_SUCCESS != SqlStmt_Execute(stmt) ||
+		SQL_SUCCESS != SqlStmt_BindColumn(stmt, 0,  SQLDT_STRING, mac_address, sizeof(mac_address), NULL, NULL) ||
+		SQL_SUCCESS != SqlStmt_BindColumn(stmt, 1,  SQLDT_STRING, comment, sizeof(comment), NULL, NULL)) {
+			Sql_ShowDebug(mmysql_handle);
+	} else {
+		clif_displaymessage(fd, "Mac address bans:");
+		while (SQL_SUCCESS == SqlStmt_NextRow(stmt)) {
+			// Gravity client crashes when this sequence occurs on a bad position :(
+			char *p = comment;
+			while ((p = strstr(p, " : ")) != NULL)
+				*(++p) = ';';
+
+			sprintf(atcmd_output, "%-20s%s", mac_address, comment);
+			clif_displaymessage(fd, atcmd_output);
+		}
+	}
+	SqlStmt_Free(stmt);
+
+	return 0;
+}
+
+ACMD_FUNC(macban)
+{
+	char mac_address[20];
+	char buf1[400];
+	char buf2[400];
+	TBL_PC *src_sd = (TBL_PC*) session[fd]->session_data;
+	size_t len;
+
+	if (sd->fd == fd) {
+		unsigned int d[6];
+		char comment[60];
+		*comment = 0;
+
+		if (!message || !*message || sscanf(message, "%2x:%2x:%2x:%2x:%2x:%2x %59[^\n]", &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], comment) < 6) {
+			clif_displaymessage(fd, "Incorrect syntax. Use '@macban <MAC address> [<comment>]' or '#macban <player name> [<comment>]'");
+			return 1;
+		}
+
+		safesnprintf(mac_address, sizeof(mac_address), "%02x:%02x:%02x:%02x:%02x:%02x", d[0], d[1], d[2], d[3], d[4], d[5]);
+		len = safesnprintf(buf1, sizeof(buf1)/2, "%s (%u) banned %s : %s", src_sd->status.name, src_sd->status.account_id, mac_address, strlen(comment) > 1 ? comment : "(no comment)");
+	} else {
+		hamster_funcs->zone_get_mac_address(sd->fd, mac_address);
+		len = safesnprintf(buf1, sizeof(buf1)/2, "%s (%u) banned %s (%u) : %s", src_sd->status.name, src_sd->status.account_id, sd->status.name, sd->status.account_id, strlen(message) > 1 ? message : "(no comment)");
+	}
+
+	Sql_EscapeStringLen(mmysql_handle, buf2, buf1, len);
+	sprintf(buf1, "INSERT INTO `mac_bans` (`mac`, `comment`) VALUES ('%s', '%s')", mac_address, buf2);
+	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, buf1) )
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	sprintf(atcmd_output, "Mac Address %s banned.", mac_address);
+	clif_displaymessage(fd, atcmd_output);
+	return 0;
+}
+
+ACMD_FUNC(liftmacban)
+{
+	char buf[41];
+	size_t len = min(20, strlen(message));
+
+	Sql_EscapeStringLen(mmysql_handle, buf, message, len);
+	sprintf(atcmd_output, "SELECT 1 FROM `mac_bans` WHERE `mac` LIKE '%s'", buf);
+	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, atcmd_output) )
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	if (Sql_NumRows(mmysql_handle) == 0) {
+		sprintf(atcmd_output, "No MAC ban found for address '%s'", buf);
+		clif_displaymessage(fd, atcmd_output);
+		return 1;
+	}
+
+	sprintf(atcmd_output, "DELETE FROM `mac_bans` WHERE `mac` LIKE '%s'", buf);
+	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, atcmd_output) )
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	sprintf(atcmd_output, "Mac Address '%s' unbanned.", message);
+	clif_displaymessage(fd, atcmd_output);
+	return 0;
+}
+
+
+#ifdef HAMSTER_OLD_SERVER
+	#undef SqlStmt_Malloc
+	#undef SqlStmt_Prepare
+	#undef SqlStmt_BindParam
+	#undef SqlStmt_BindColumn
+	#undef SqlStmt_Execute
+	#undef SqlStmt_Free
+	#undef Sql_EscapeStringLen
+	#undef SqlStmt_NextRow
+	#undef Sql_QueryStr
+	#undef Sql_Query
+	#undef Sql_NumRows
+#endif
 
 /*==========================================
  * @send (used for testing packet sends from the client)
@@ -8972,6 +9184,8 @@ ACMD_FUNC(reject)
 	return 0;
 }
 
+
+
 /*===================================
  * Cash Points
  *-----------------------------------*/
@@ -11735,6 +11949,14 @@ void atcommand_basecommands(void) {
 	 **/
 	AtCommandInfo atcommand_base[] = {
 #include "../custom/atcommand_def.inc"
+		ACMD_DEF(reloadint),
+		ACMD_DEF(reloadhamster),
+		ACMD_DEF(showautoban),
+		ACMD_DEF(liftautoban),
+		ACMD_DEF(netinfo),
+		ACMD_DEF(macban),
+		ACMD_DEF(liftmacban),
+		ACMD_DEF(showmacban),
 		ACMD_DEF2R("warp", mapmove, ATCMD_NOCONSOLE),
 		ACMD_DEF(where),
 		ACMD_DEF(jumpto),

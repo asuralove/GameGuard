@@ -13,6 +13,7 @@
 #include "../common/socket.h"
 #include "../common/sql.h"
 #include "../common/strlib.h"
+#include "../common/hamster.h"
 #include "account.h"
 #include <stdlib.h>
 
@@ -61,6 +62,7 @@ static bool account_db_sql_iter_next(AccountDBIterator* self, struct mmo_account
 
 static bool mmo_auth_fromsql(AccountDB_SQL* db, struct mmo_account* acc, uint32 account_id);
 static bool mmo_auth_tosql(AccountDB_SQL* db, const struct mmo_account* acc, bool is_new);
+static bool account_db_sql_is_mac_banned(AccountDB* db, const char *mac);
 
 /// public constructor
 AccountDB* account_db_sql(void) {
@@ -77,6 +79,7 @@ AccountDB* account_db_sql(void) {
 	db->vtable.load_num     = &account_db_sql_load_num;
 	db->vtable.load_str     = &account_db_sql_load_str;
 	db->vtable.iterator     = &account_db_sql_iterator;
+	db->vtable.is_mac_banned= &account_db_sql_is_mac_banned;
 
 	// initialize to default values
 	db->accounts = NULL;
@@ -96,6 +99,25 @@ AccountDB* account_db_sql(void) {
 	return &db->vtable;
 }
 
+static bool account_db_sql_is_mac_banned(AccountDB* self, const char *mac) {
+	AccountDB_SQL* db = (AccountDB_SQL*)self;
+	Sql *db_handle = db->accounts;
+	SqlStmt* stmt = SqlStmt_Malloc(db_handle);
+
+	bool result = false;
+
+	if (SQL_SUCCESS != SqlStmt_Prepare(stmt, "SELECT 1 FROM mac_bans WHERE mac = ?") ||
+		SQL_SUCCESS != SqlStmt_BindParam(stmt, 0, SQLDT_STRING, (void*)mac, strlen(mac)) ||
+		SQL_SUCCESS != SqlStmt_Execute(stmt)) {
+			Sql_ShowDebug(db_handle);
+	} else {
+		result = (SqlStmt_NumRows(stmt) > 0);
+		SqlStmt_FreeResult(stmt);
+	}
+	SqlStmt_Free(stmt);
+
+	return result;
+}
 
 /* ------------------------------------------------------------------------- */
 

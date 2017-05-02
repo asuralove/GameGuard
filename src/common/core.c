@@ -12,6 +12,7 @@
 #include "timer.h"
 #include "thread.h"
 #include "mempool.h"
+#include "hamster.h"
 #include "sql.h"
 #endif
 #include <stdlib.h>
@@ -359,6 +360,7 @@ int main (int argc, char **argv)
 
 	timer_init();
 	socket_init();
+	hamster_core_init();
 
 	do_init(argc,argv);
 
@@ -367,6 +369,8 @@ int main (int argc, char **argv)
 		int next = do_timer(gettick_nocache());
 		do_sockets(next);
 	}
+
+	hamster_core_final();
 
 	do_final();
 

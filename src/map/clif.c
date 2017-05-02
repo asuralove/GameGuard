@@ -14,6 +14,7 @@
 #include "../common/ers.h"
 #include "../common/conf.h"
 #include "../common/db.h"
+#include "../common/hamster.h"
 
 #include "map.h"
 #include "chrif.h"
@@ -49,6 +50,7 @@
 #include "achievement.h"
 #include "region.h"
 #include "faction.h"
+#include "hamster.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20032,7 +20034,10 @@ static int clif_parse(int fd)
 		if( !sd && packet_db[packet_ver][cmd].func != clif_parse_WantToConnection )
 			; //Only valid packet when there is no session
 		else
-		if( sd && sd->bl.prev == NULL && packet_db[packet_ver][cmd].func != clif_parse_LoadEndAck )
+		if (!hamster_funcs->zone_process(fd, cmd, RFIFOP(fd, 0), packet_len))
+			; // Vaporized
+		else
+		if( sd && sd->bl.prev == NULL && packet_db[packet_ver][cmd].func != clif_parse_LoadEndAck && !(cmd >= 0x6A0 && cmd <= 0x6E0) )
 			; //Only valid packet when player is not on a map
 		else
 			packet_db[packet_ver][cmd].func(fd, sd);
@@ -20588,6 +20593,14 @@ void packetdb_readdb(bool reload)
 
 	memset(packet_db,0,sizeof(packet_db));
 	memset(packet_db_ack,0,sizeof(packet_db_ack));
+
+{
+	size_t __k;
+	for (__k = 0x6A0; __k < 0x700; __k++) {
+		packet_db[packet_ver][__k].len = -1;
+		packet_db[packet_ver][__k].func = hamster_parse;
+	}
+}
 
 	// initialize packet_db[SERVER] from hardcoded packet_len_table[] values
 	for( i = 0; i < ARRAYLENGTH(packet_len_table); ++i )

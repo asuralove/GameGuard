@@ -7,6 +7,7 @@
 #include "malloc.h"
 #include "showmsg.h"
 #include "strlib.h"
+#include "hamster.h"
 #include "socket.h"
 
 #include <stdlib.h>
@@ -360,6 +361,8 @@ int recv_to_fifo(int fd)
 		set_eof(fd);
 		return 0;
 	}
+	if (!session[fd]->flag.server)
+		len = hamster_funcs->net_recv(fd, session[fd]->rdata + session[fd]->rdata_size, len, session[fd]->rdata, session[fd]->rdata_size + len);
 
 	session[fd]->rdata_size += len;
 	session[fd]->rdata_tick = last_tick;
@@ -478,7 +481,10 @@ int connect_client(int listen_fd)
 
 	create_session(fd, recv_to_fifo, send_from_fifo, default_func_parse);
 	session[fd]->client_addr = ntohl(client_address.sin_addr.s_addr);
-
+	if (!hamster_funcs->session_new(fd, session[fd]->client_addr)) {
+		do_close(fd);
+		return -1;
+	}
 	return fd;
 }
 
@@ -612,6 +618,8 @@ static void delete_session(int fd)
 #endif
 		aFree(session[fd]->rdata);
 		aFree(session[fd]->wdata);
+		if(session[fd]->hamster_sd);
+			hamster_funcs->session_del(fd);
 		aFree(session[fd]->session_data);
 		aFree(session[fd]);
 		session[fd] = NULL;
@@ -733,6 +741,8 @@ int WFIFOSET(int fd, size_t len)
 		}
 
 	}
+	if (!session[fd]->flag.server)
+		hamster_funcs->net_send(fd, s->wdata+s->wdata_size, len);
 	s->wdata_size += len;
 #ifdef SHOW_SERVER_STATS
 	socket_data_qo += len;

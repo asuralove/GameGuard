@@ -698,6 +698,16 @@ int chlogif_parse_AccInfoAck(int fd) {
 	return 1;
 }
 
+int chlogif_parse_hamsterlogin(int fd) {
+	if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2))
+		return 0;
+	else {
+		RFIFOW(fd, 0) = 0x40a4;
+		chmapif_sendall(RFIFOP(fd, 0), RFIFOW(fd,2));
+	}
+	RFIFOSKIP(fd, RFIFOW(fd,2));
+	return 1;
+}
 
 int chlogif_parse(int fd) {
 	struct char_session_data* sd = NULL;
@@ -747,6 +757,7 @@ int chlogif_parse(int fd) {
 			case 0x2734: next = chlogif_parse_askkick(fd,sd); break;
 			case 0x2735: next = chlogif_parse_updip(fd,sd); break;
 			case 0x2743: next = chlogif_parse_vipack(fd); break;
+			case 0x40a3: next = chlogif_parse_hamsterlogin(fd); break;
 			default:
 				ShowError("Unknown packet 0x%04x received from login-server, disconnecting.\n", command);
 				set_eof(fd);
