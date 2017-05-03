@@ -31,9 +31,8 @@ struct login_session_data {
 	uint32 account_id;			///also GID
 	long login_id1;
 	long login_id2;
-	char sex;			/// 'F','M','S','U'
+	char sex;			/// 'F','M','S'
 
-	void *hamster_sd;
 	char mac_address[20];
 
 	char userid[NAME_LENGTH];	/// account name

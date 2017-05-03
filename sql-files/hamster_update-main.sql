@@ -1,8 +1,0 @@
-
-CREATE TABLE `mac_bans` (
-`mac` VARCHAR( 17 ) NOT NULL PRIMARY KEY,
-`comment` VARCHAR( 255 ) NOT NULL,
-`time` timestamp NOT NULL default CURRENT_TIMESTAMP
-) ENGINE = MYISAM ;
-
-ALTER TABLE `login` ADD `last_mac` VARCHAR(18) NOT NULL DEFAULT '';

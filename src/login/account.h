@@ -74,9 +74,6 @@ struct AccountDB {
 	/// @param self Database
 	void (*destroy)(AccountDB* self);
 
-	/// Check if MAC is banned
-	bool (*is_mac_banned)(AccountDB* self, const char *mac);
-
 	/// Gets a property from this database.
 	/// These read-only properties must be implemented:
 	///

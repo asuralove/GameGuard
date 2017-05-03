@@ -1523,23 +1523,6 @@ int chmapif_bonus_script_save(int fd) {
 	return 1;
 }
 
-int chmapif_parse_hamstermap(int fd, int id) {
-	uint16 len;
-
-	if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < (len = RFIFOW(fd,2)))
-		return 0;
-
-	if (chlogif_isconnected()) {
-		WFIFOHEAD(login_fd,len);
-		WFIFOW(login_fd, 0) = 0x40a2;
-		memcpy(WFIFOP(login_fd, 2), RFIFOP(fd, 2), len-2);
-		WFIFOSET(login_fd, len);
-	}
-
-	RFIFOSKIP(fd, len);
-	return 1;
-}
-
 /**
  * Inform the mapserv wheater his login attemp to us was a success or not
  * @param fd : file descriptor to parse, (link to mapserv)
@@ -1599,7 +1582,6 @@ int chmapif_parse(int fd){
 			case 0x2b30: next=chmapif_parse_reqranking_reset(fd); break;
 			case 0x2b32: next=chmapif_parse_reqitem_remove4all(fd); break;
 			case 0x2b35: next=chmapif_parse_reqchar_dump2sql(fd); break;
-			case 0x40a1: next=chmapif_parse_hamstermap(fd,id); break;
 			// -----------
 			case 0x2b15: next=chmapif_parse_req_saveskillcooldown(fd); break;
 			case 0x2b16: next=chmapif_parse_updmapinfo(fd); break;

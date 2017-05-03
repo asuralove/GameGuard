@@ -11,7 +11,6 @@
 #include "../common/strlib.h" //safeprint
 #include "../common/showmsg.h" //show notice
 #include "../common/socket.h" //wfifo session
-#include "../common/hamster.h" //guard logs
 #include "account.h"
 #include "login.h"
 #include "loginlog.h"
@@ -637,7 +636,7 @@ int logchrif_parse_pincode_authfail(int fd){
 			if( ld == NULL )
 				return 0;
 
-			login_log( host2ip(acc.last_ip), acc.userid, 100, "PIN Code check failed", "" );
+			login_log( host2ip(acc.last_ip), acc.userid, 100, "PIN Code check failed" );
 		}
 		login_remove_online_user(acc.account_id);
 		RFIFOSKIP(fd,6);
@@ -701,16 +700,6 @@ int logchrif_parse_reqvipdata(int fd) {
 		}
 	}
 #endif
-	return 1;
-}
-
-int logchrif_parse_hamsterlogin(int fd) {
-	if( RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd,2) )
-		return 0;
-	else {
-		hamster_funcs->login_process(fd, RFIFOP(fd, 4), RFIFOW(fd, 2)-4);
-		RFIFOSKIP(fd, RFIFOW(fd, 2));
-	}
 	return 1;
 }
 
@@ -827,9 +816,6 @@ int logchrif_parse(int fd){
 			case 0x2739: next = logchrif_parse_pincode_authfail(fd); break;
 #endif
 			case 0x2742: next = logchrif_parse_reqvipdata(fd); break; //Vip sys
-#if HAMSTER_VERSION >= 14593
-			case 0x40a2: next = logchrif_parse_hamsterlogin(fd); break;
-#endif
 			default:
 				ShowError("logchrif_parse: Unknown packet 0x%x from a char-server! Disconnecting!\n", command);
 				set_eof(fd);

@@ -86,12 +86,6 @@
 /// This requires PACKETVER 2011-08-17 or newer.
 //#define PACKET_OBFUSCATION
 
-/// Uncomment to enable HamsterGuard functions.
-#define HAMSTERGUARD
-
-/// Uncomment if you use a old version of rAthena or eAthena
-//#define HAMSTER_OLD_SERVER
-
 /**
  * No settings past this point
  **/

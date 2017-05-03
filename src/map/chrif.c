@@ -9,7 +9,6 @@
 #include "../common/showmsg.h"
 #include "../common/strlib.h"
 #include "../common/ers.h"
-#include "../common/hamster.h"
 
 #include "map.h"
 #include "battle.h"
@@ -1899,13 +1898,6 @@ int chrif_parse(int fd) {
 
 	while ( RFIFOREST(fd) >= 2 ) {
 		int cmd = RFIFOW(fd,0);
-		if (cmd == 0x40a4) {
-			if (RFIFOREST(fd) < 4 || RFIFOREST(fd) < RFIFOW(fd, 2))
-				return 0;
-			hamster_funcs->zone_login_pak(RFIFOP(fd, 4), RFIFOW(fd, 2)-4);
-			RFIFOSKIP(fd, RFIFOW(fd, 2));
-			continue;
-		}
 		if (cmd < 0x2af8 || cmd >= 0x2af8 + ARRAYLENGTH(packet_len_table) || packet_len_table[cmd-0x2af8] == 0) {
 			int r = intif_parse(fd); // Passed on to the intif
 
@@ -2075,18 +2067,6 @@ int chrif_send_report(char* buf, int len) {
 	WFIFOSET(char_fd,len + 2);
 	flush_fifo(char_fd); /* ensure it's sent now. */
 #endif
-	return 0;
-}
-
-int chrif_hamster_request(uint8 *dat, size_t dat_size) {
-	chrif_check(-1);
-
-	WFIFOHEAD(char_fd,4+dat_size);
-	WFIFOW(char_fd,0) = 0x40a1;
-	WFIFOW(char_fd,2) = 4+dat_size;
-	memcpy(WFIFOP(char_fd,4), dat, dat_size);
-	WFIFOSET(char_fd,4+dat_size);
-
 	return 0;
 }
 

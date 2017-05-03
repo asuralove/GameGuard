@@ -21,7 +21,6 @@
 #include "../common/cli.h"
 #include "../common/utils.h"
 #include "../common/mmo.h"
-#include "../common/hamster.h"
 #include "../config/core.h"
 #include "account.h"
 #include "ipban.h"
@@ -387,12 +386,7 @@ int login_mmo_auth(struct login_session_data* sd, bool isServer) {
 		}
 	}
 
-	if (acc.sex != 'S' && acc.sex != 's' && (len = hamster_funcs->login_process_auth2(sd->fd, acc.group_id)) > 0) {
-		ShowNotice("Connection refused by HamsterGuard (account: %s, ip: %s)\n", sd->userid, ip);
-		return len;
-	}
-
-	ShowNotice("Authentication accepted (account: %s, id: %d, ip: %s, mac: %d)\n", sd->userid, acc.account_id, ip, acc.mac_address);
+	ShowNotice("Authentication accepted (account: %s, id: %d, ip: %s)\n", sd->userid, acc.account_id, ip);
 
 	// update session data
 	sd->account_id = acc.account_id;
@@ -749,9 +743,9 @@ void do_final(void) {
 		aFree(tmp);
 	}
 
-	login_log(0, "login server", 100, "login server shutdown","");
+	login_log(0, "login server", 100, "login server shutdown");
 	ShowStatus("Terminating...\n");
-	hamster_funcs->login_final();
+
 	if( login_config.log_login )
 		loginlog_final();
 
@@ -794,23 +788,6 @@ void do_shutdown(void) {
 		flush_fifos();
 		runflag = CORE_ST_STOP;
 	}
-}
-
-void _FASTCALL hamster_action(int fd, int task, int id, intptr data) {
-	if (task == HAMSTER_ZONE_ACTION) {
-		if (id > 10*1024)
-			return;
-
-		WFIFOHEAD(fd, id);
-		WFIFOW(fd, 0) = 0x40a3;
-		WFIFOW(fd, 2) = id + 4;
-		memcpy(WFIFOP(fd, 4), (const void*)data, id);
-		WFIFOSET(fd, id+4);
-	}
-}
-
-bool _FASTCALL check_mac_banned(const int8 *mac) {
-	return accounts->is_mac_banned(accounts, (const char *)mac);
 }
 
 /**
@@ -887,9 +864,7 @@ int do_init(int argc, char** argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
-	ea_funcs->ea_is_mac_banned = check_mac_banned;
-	hamster_funcs->login_init();
-	ea_funcs->action_request = hamster_action;
+
 	// server port open & binding
 	if( (login_fd = make_listen_bind(login_config.login_ip,login_config.login_port)) == -1 ) {
 		ShowFatalError("Failed to bind to port '"CL_WHITE"%d"CL_RESET"'\n",login_config.login_port);
@@ -904,7 +879,7 @@ int do_init(int argc, char** argv) {
 	do_init_logincnslif();
 
 	ShowStatus("The login-server is "CL_GREEN"ready"CL_RESET" (Server is listening on the port %u).\n\n", login_config.login_port);
-	login_log(0, "login server", 100, "login server started","");
+	login_log(0, "login server", 100, "login server started");
 
 	return 0;
 }

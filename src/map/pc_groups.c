@@ -7,12 +7,10 @@
 #include "../common/showmsg.h"
 #include "../common/strlib.h" // strcmp
 #include "../common/socket.h"
-#include "../common/hamster.h"
 
 #include "atcommand.h" // AtCommandType
 #include "pc_groups.h"
 #include "pc.h" // e_pc_permission
-#include "hamster.h"
 
 typedef struct GroupSettings GroupSettings;
 
@@ -470,25 +468,3 @@ void pc_groups_reload(void) {
 	}
 	mapit_free(iter);
 }
-
-/**
- * Iterates groups with a given callback functipn
- * @public
- */
-void pc_group_iterate(bool(*callback)(int group_id, int level, const char* name))
-{
-	GroupSettings *group_settings = NULL;
-	DBIterator *iter = NULL;
-	
-	iter = db_iterator(pc_group_db);
-	for (group_settings = (GroupSettings*)dbi_first(iter);
-	     dbi_exists(iter);
-	     group_settings = (GroupSettings*)dbi_next(iter))
-	{
-		if (!callback(group_settings->id, group_settings->level, group_settings->name)) {
-			break;
-		}
-	}
-	iter->destroy(iter);
-}
-
