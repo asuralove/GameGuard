@@ -13,6 +13,7 @@
 #include "../common/strlib.h"
 #include "../common/utils.h"
 #include "../common/conf.h"
+#include "../common/hamster.h"
 
 #include "map.h"
 #include "atcommand.h"
@@ -49,11 +50,15 @@
 #include "pc.h"
 #include "achievement.h"
 #include "faction.h"
+#include "hamster.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 
 #define ATCOMMAND_LENGTH 50
@@ -149,7 +154,139 @@ static const char* atcommand_help_string(const char* command)
 	return str;
 }
 
+/*==========================================
+ * @macban (bloquea el acceso a una mac)
+ *------------------------------------------*/
+ACMD_FUNC(macban)
+{
+	char mac_address[20];
+	char mac_buf[400];
+	char acc_buf[400];
+	TBL_PC *src_sd = (TBL_PC*) session[fd]->session_data;
+	size_t len;
 
+	if (sd->fd == fd) {
+		unsigned int d[6];
+		char comment[60];
+		*comment = 0;
+
+		if (!message || !*message || sscanf(message, "%2x:%2x:%2x:%2x:%2x:%2x %59[^\n]", &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], comment) < 6) {
+			clif_displaymessage(fd, "Sintaxis incorrecta, usa '@macban <dirección MAC> [<comentario>]' o '#macban <nombre del jugador> [<comentario>]'");
+			return 1;
+		}
+
+		safesnprintf(mac_address, sizeof(mac_address), "%02x:%02x:%02x:%02x:%02x:%02x", d[0], d[1], d[2], d[3], d[4], d[5]);
+		len = safesnprintf(mac_buf, sizeof(mac_buf)/2, "%s (%u) baneado %s : %s", src_sd->status.name, src_sd->status.account_id, mac_address, strlen(comment) > 1 ? comment : "(sin comentario)");
+	} else {
+		hamster->msg("No se ha podido banear la MAC %s.", mac_address);
+		return 1;
+	}
+
+	Sql_EscapeStringLen(mmysql_handle, acc_buf, mac_buf, len);
+	sprintf(mac_buf, "INSERT INTO `mac_bans` (`mac`, `comment`) VALUES ('%s', '%s')", mac_address, acc_buf);
+	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, mac_buf) )
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+	hamster->msg("La dirección MAC %s ha sido baneada.", mac_address);
+	sprintf(atcmd_output, "Prohibido el acceso a la MAC %s.", mac_address);
+	clif_displaymessage(fd, atcmd_output);
+	return 0;
+}
+/*==========================================
+ * @unbanmac (remueve el bloqueo de una mac)
+ *------------------------------------------*/
+ACMD_FUNC(unbanmac)
+{
+	char buf[41];
+	size_t len = min(20, strlen(message));
+
+	Sql_EscapeStringLen(mmysql_handle, buf, message, len);
+	sprintf(atcmd_output, "SELECT 1 FROM `mac_bans` WHERE `mac` LIKE '%s'", buf);
+	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, atcmd_output) )
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	if (Sql_NumRows(mmysql_handle) == 0) {
+		sprintf(atcmd_output, "No se ha encontrado la MAC '%s' en la base de datos.", buf);
+		clif_displaymessage(fd, atcmd_output);
+		return 1;
+	}
+
+	sprintf(atcmd_output, "DELETE FROM `mac_bans` WHERE `mac` LIKE '%s'", buf);
+	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, atcmd_output) )
+	{
+		Sql_ShowDebug(mmysql_handle);
+		return 1;
+	}
+
+	hamster->msg("La MAC '%s' ha sido desbloqueada.", message);
+	sprintf(atcmd_output, "Acceso permitido a la MAC '%s'.", message);
+	clif_displaymessage(fd, atcmd_output);
+	return 0;
+}
+/*==========================================
+ * @macs (Muestra las MAC baneadas)
+ *------------------------------------------*/
+ACMD_FUNC(macs)
+{
+	SqlStmt* stmt = SqlStmt_Malloc(mmysql_handle);
+	char mac_address[20];
+	char comment[90];
+
+	if (SQL_SUCCESS != SqlStmt_Prepare(stmt, "SELECT `mac`, `comment` FROM mac_bans ORDER BY `mac` DESC LIMIT 100") ||
+		SQL_SUCCESS != SqlStmt_Execute(stmt) ||
+		SQL_SUCCESS != SqlStmt_BindColumn(stmt, 0,  SQLDT_STRING, mac_address, sizeof(mac_address), NULL, NULL) ||
+		SQL_SUCCESS != SqlStmt_BindColumn(stmt, 1,  SQLDT_STRING, comment, sizeof(comment), NULL, NULL)) {
+			Sql_ShowDebug(mmysql_handle);
+	} else {
+		clif_displaymessage(fd, "Lista de MAC bloqueadas:");
+		while (SQL_SUCCESS == SqlStmt_NextRow(stmt)) {
+			//TODO: Posible gravity cuando se ejecuta de una mala forma.
+			char *p = comment;
+			while ((p = strstr(p, " : ")) != NULL)
+				*(++p) = ';';
+
+			sprintf(atcmd_output, "%-20s%s", mac_address, comment);
+			clif_displaymessage(fd, atcmd_output);
+		}
+	}
+	SqlStmt_Free(stmt);
+
+	return 0;
+}
+/*==========================================
+ * @showmac (muestra la MAC e IP de un usuario)
+ *------------------------------------------*/
+ACMD_FUNC(showmac)
+{
+	uint32 ip;
+	char mac_address[20];
+	
+	nullpo_retr(-1,sd);
+	sprintf(atmd_output, "Se ha solicitado información para %sd (AID %d | CID %d", sd->status.name, sd->status.account_id, sd->status.char_id)
+	clif_displaymessage(fd,atcmd_output);
+	hamster->get_mac_address(sd->status.account_id, mac_address);
+	sprintf(atcmd_output, "- Dirección MAC : %s", mac_address);
+	clif_displaymessage(fd,atcmd_output);
+	ip = session[sd->fd]->client_addr;
+	sprintf(atcmd_output, "- Dirección IP : %d.%d.%d.%d", CONVIP(ip));
+	clif_displaymessage(fd,atcmd_output);
+	
+	return 0;
+}
+/*==========================================
+ * @showmac (muestra la MAC e IP de un usuario)
+ *------------------------------------------*/
+ACMD_FUNC(reloadhamsterguard)
+{
+	hamster->reload();
+	clif_displaymessage(fd, "La configuración de HamsterGuard se ha recargado.");
+	return 0;
+}
 /*==========================================
  * @send (used for testing packet sends from the client)
  *------------------------------------------*/
@@ -11735,6 +11872,11 @@ void atcommand_basecommands(void) {
 	 **/
 	AtCommandInfo atcommand_base[] = {
 #include "../custom/atcommand_def.inc"
+		ACMD_DEF(macban),
+		ACMD_DEF(unbanmac),
+		ACMD_DEF(macs),
+		ACMD_DEF(showmac),
+		ACMD_DEF(reloadhamsterguard),
 		ACMD_DEF2R("warp", mapmove, ATCMD_NOCONSOLE),
 		ACMD_DEF(where),
 		ACMD_DEF(jumpto),

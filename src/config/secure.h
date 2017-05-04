@@ -46,4 +46,12 @@
  **/
 #define SECURE_NPCTIMEOUT_INTERVAL 1
 
+/**
+ * (HamsterGuard) Activación
+ * Coméntalo para desactivarlo, pero si está
+ * correctamente instalado no dejará iniciar
+ * el emulador.
+ **/
+#define HAMSTERGUARD
+
 #endif // _CONFIG_SECURE_H_

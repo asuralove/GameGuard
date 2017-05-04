@@ -15,6 +15,7 @@
 #include "../common/utils.h"
 #include "../common/md5calc.h"
 #include "../common/random.h"
+#include "../common/hamster.h"
 #include "account.h"
 #include "ipban.h" //ipban_check
 #include "login.h"
@@ -108,7 +109,7 @@ static void logclif_auth_ok(struct login_session_data* sd) {
 		}
 	}
 
-	login_log(ip, sd->userid, 100, "login ok");
+	login_log(ip, sd->userid, 100, "login ok", sd->mac_address);
 	ShowStatus("Connection of the account '%s' accepted.\n", sd->userid);
 
 	WFIFOHEAD(fd,47+32*server_num);
@@ -187,14 +188,14 @@ static void logclif_auth_failed(struct login_session_data* sd, int result) {
 	int fd = sd->fd;
 	uint32 ip = session[fd]->client_addr;
 
-	if (login_config.log_login)
+ 	if (login_config.log_login)
 	{
 		if(result >= 0 && result <= 15)
-		    login_log(ip, sd->userid, result, msg_txt(result));
+		    login_log(ip, sd->userid, result, msg_txt(result), sd->mac_address);
 		else if(result >= 99 && result <= 104)
-		    login_log(ip, sd->userid, result, msg_txt(result-83)); //-83 offset
+		    login_log(ip, sd->userid, result, msg_txt(result-83), sd->mac_address); //-83 offset
 		else
-		    login_log(ip, sd->userid, result, msg_txt(22)); //unknow error
+		    login_log(ip, sd->userid, result, msg_txt(22), sd->mac_address); //unknow error
 	}
 
 	if( (result == 0 || result == 1) && login_config.dynamic_pass_failure_ban )

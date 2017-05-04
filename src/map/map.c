@@ -40,6 +40,7 @@
 #include "faction.h"
 #include "cashshop.h"
 #include "channel.h"
+#include "hamster.h"
 
 #include <stdlib.h>
 #include <math.h>
@@ -4480,6 +4481,7 @@ void do_final(void)
 	do_final_vending();
 	do_final_buyingstore();
 	do_final_path();
+	hamster_final();
 
 	map_db->destroy(map_db, map_db_final);
 
@@ -4816,6 +4818,7 @@ int do_init(int argc, char *argv[])
 	do_init_achievement();
 	do_init_faction();
 	do_init_region();
+	hamster_init();
 
 	npc_event_do_oninit();	// Init npcs (OnInit)
 

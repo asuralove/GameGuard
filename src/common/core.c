@@ -14,6 +14,7 @@
 #include "mempool.h"
 #include "sql.h"
 #endif
+#include "hamster.h"
 #include <stdlib.h>
 #include <signal.h>
 #ifndef _WIN32
@@ -359,7 +360,7 @@ int main (int argc, char **argv)
 
 	timer_init();
 	socket_init();
-
+	do_hamster_init();
 	do_init(argc,argv);
 
 	// Main runtime cycle
@@ -367,7 +368,7 @@ int main (int argc, char **argv)
 		int next = do_timer(gettick_nocache());
 		do_sockets(next);
 	}
-
+	do_hamster_final();
 	do_final();
 
 	timer_final();
