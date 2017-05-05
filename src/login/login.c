@@ -57,6 +57,9 @@ int login_fd; // login server file descriptor socket
 //early declaration
 bool login_check_password(const char* md5key, int passwdenc, const char* passwd, const char* refpass);
 
+//mac banned
+bool _FASTCALL check_mac_banned(const int8 *mac);
+
 ///Accessors
 AccountDB* login_get_accounts_db(void){
 	return accounts;
@@ -284,8 +287,9 @@ int login_mmo_auth(struct login_session_data* sd, bool isServer) {
 	ip2str(session[sd->fd]->client_addr, ip);
 
 	// Mac Banned
-	if( check_mac_banned(acc.mac_address) ) {
-		hamster->msg("La MAC '%s' se ha intentado conectar, pero se encuentra bloqueada. User kickeado.", acc.mac_address);
+	if( hamster->is_mac_banned(acc.mac_address) ) {
+		ShowNotice("La MAC '%s' se ha intentado conectar, pero esta bloqueada.", acc.mac_address);
+		hamster->msg("MAC baneada. Conexion rechazada.");
 		return 6;
 	}
 
@@ -750,7 +754,7 @@ void do_final(void) {
 		aFree(tmp);
 	}
 
-	login_log(0, "login server", 100, "login server shutdown");
+	login_log(0, "login server", 100, "login server shutdown", "");
 	ShowStatus("Terminating...\n");
 
 	if( login_config.log_login )
@@ -892,7 +896,7 @@ int do_init(int argc, char** argv) {
 	do_init_logincnslif();
 
 	ShowStatus("The login-server is "CL_GREEN"ready"CL_RESET" (Server is listening on the port %u).\n\n", login_config.login_port);
-	login_log(0, "login server", 100, "login server started");
+	login_log(0, "login server", 100, "login server started", "");
 
 	return 0;
 }

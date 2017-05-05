@@ -178,7 +178,8 @@ ACMD_FUNC(macban)
 		safesnprintf(mac_address, sizeof(mac_address), "%02x:%02x:%02x:%02x:%02x:%02x", d[0], d[1], d[2], d[3], d[4], d[5]);
 		len = safesnprintf(mac_buf, sizeof(mac_buf)/2, "%s (%u) baneado %s : %s", src_sd->status.name, src_sd->status.account_id, mac_address, strlen(comment) > 1 ? comment : "(sin comentario)");
 	} else {
-		hamster->msg("No se ha podido banear la MAC %s.", mac_address);
+		sprintf(atcmd_output, "No se ha podido banear la MAC %s.", mac_address);
+		clif_displaymessage(fd, atcmd_output);
 		return 1;
 	}
 
@@ -189,7 +190,7 @@ ACMD_FUNC(macban)
 		Sql_ShowDebug(mmysql_handle);
 		return 1;
 	}
-	hamster->msg("La dirección MAC %s ha sido baneada.", mac_address);
+	hamster->mac_banned(mac_address);
 	sprintf(atcmd_output, "Prohibido el acceso a la MAC %s.", mac_address);
 	clif_displaymessage(fd, atcmd_output);
 	return 0;
@@ -223,7 +224,7 @@ ACMD_FUNC(unbanmac)
 		return 1;
 	}
 
-	hamster->msg("La MAC '%s' ha sido desbloqueada.", message);
+	hamster->mac_unbanned(message);
 	sprintf(atcmd_output, "Acceso permitido a la MAC '%s'.", message);
 	clif_displaymessage(fd, atcmd_output);
 	return 0;
@@ -264,13 +265,11 @@ ACMD_FUNC(macs)
 ACMD_FUNC(showmac)
 {
 	uint32 ip;
-	char mac_address[20];
 	
 	nullpo_retr(-1,sd);
-	sprintf(atmd_output, "Se ha solicitado información para %sd (AID %d | CID %d", sd->status.name, sd->status.account_id, sd->status.char_id)
+	sprintf(atcmd_output, "Se ha solicitado información para %sd (AID %d | CID %d", sd->status.name, sd->status.account_id, sd->status.char_id);
 	clif_displaymessage(fd,atcmd_output);
-	hamster->get_mac_address(sd->status.account_id, mac_address);
-	sprintf(atcmd_output, "- Dirección MAC : %s", mac_address);
+	sprintf(atcmd_output, "- Dirección MAC : %d", hamster->get_mac_address(sd->status.account_id));
 	clif_displaymessage(fd,atcmd_output);
 	ip = session[sd->fd]->client_addr;
 	sprintf(atcmd_output, "- Dirección IP : %d.%d.%d.%d", CONVIP(ip));
@@ -279,7 +278,7 @@ ACMD_FUNC(showmac)
 	return 0;
 }
 /*==========================================
- * @showmac (muestra la MAC e IP de un usuario)
+ * @reloadhamsterguard (recarga las configuraciones)
  *------------------------------------------*/
 ACMD_FUNC(reloadhamsterguard)
 {

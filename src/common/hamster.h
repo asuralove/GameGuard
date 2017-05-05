@@ -9,7 +9,7 @@ extern struct HAMSTER_CORE *hamster;
 	#define HAMVER_A 4
 	#define HAMVER_B 1
 	#define HAMVER_C 1
-	#define HAMSTER_VERSION (HAMSTER_VERSION_MAYOR * 10000 HAMSTER_VERSION_MENOR * 100 HAMSTER_VERSION_PATCH)
+	#define HAMSTER_VERSION (HAMVER_A * 10000 HAMVER_B * 100 HAMVER_C)
 #endif
 
 #if defined(__64BIT__) && defined(_MSC_VER)
@@ -62,12 +62,15 @@ struct HAMSTER_CORE {
 	HAMSTER_CALL(final, void, (void));
 	HAMSTER_CALL(reload, void, (void));
 	HAMSTER_CALL(is_mac_banned, bool, (const char *mac));
+	HAMSTER_CALL(mac_banned, void, (const char *mac));
+	HAMSTER_CALL(mac_unbanned, void, (const char *mac));
 	HAMSTER_CALL(action_request, void, (int fd, int task, int id, intptr data));
-	HAMSTER_CALL(socket_disconnect, void, (int fd));
-	HAMSTER_CALL(socket_send, void, (int fd, const unsigned char* buf, int length));
+	HAMSTER_CALL(socket_dc, void, (int fd));
+	HAMSTER_CALL(socket_c, void, (int fd, const unsigned char* buf, int length));
 	HAMSTER_CALL(player_log, void, (int fd, const char *msg));
-	HAMSTER_CALL(hamster_msg, void, (const char*));
-	HAMSTER_CALL(get_mac_address, void, (int acc_id, const char *mac));
+	HAMSTER_CALL(msg, void, (const char*));
+	HAMSTER_CALL(get_mac_address, int, (int acc_id));
+	HAMSTER_CALL(abnormal, void, (int code));
 };
 #pragma pack(pop)
 

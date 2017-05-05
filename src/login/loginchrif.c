@@ -636,7 +636,7 @@ int logchrif_parse_pincode_authfail(int fd){
 			if( ld == NULL )
 				return 0;
 
-			login_log( host2ip(acc.last_ip), acc.userid, 100, "PIN Code check failed" );
+			login_log( host2ip(acc.last_ip), acc.userid, 100, "PIN Code check failed", "");
 		}
 		login_remove_online_user(acc.account_id);
 		RFIFOSKIP(fd,6);

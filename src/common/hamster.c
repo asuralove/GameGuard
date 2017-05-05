@@ -8,6 +8,7 @@
 #include "mmo.h"
 #include "core.h"
 #include "hamster.h"
+#include "../config/secure.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,57 +21,46 @@
 #include <fcntl.h>
 
 struct HAMSTER_CORE *hamster;
-static void* hamster_get(const char *name);
 void _FASTCALL hamster_msg(const char *format);
 void _FASTCALL hamster_abnormal_start(int code);
 void _FASTCALL hamster_socket_disconnect(int fd);
-void _FASTCALL hamster_socket_send(int fd, const insigned char* buf, int lenght);
+void _FASTCALL mac_banned(const char *mac);
+void _FASTCALL mac_unbanned(const char *mac);
+void _FASTCALL hamster_socket_send(int fd, const unsigned char* buf, int lenght);
 
 void do_hamster_final() {
-	db_destroy(hamster_timer);
 	hamster->final();
 }
 
 void do_hamster_init() {
-	int *version;
-	
-	version = (int*)hamster_get("version");
-	if(!version) {
-		ShowFatalError("No se puede obtener la versión de HamsterGuard.");
-		exit(EXIT_FAILURE);
-	}
 #ifndef HAMSTERGUARD
-	ShowFatalError("HamsterGuard no se encuentra activado, por favor revisa tu configuración 'core'.\n");
+	ShowFatalError("HamsterGuard no se encuentra activado, por favor revisa tu configuracion 'secure.h'.\n");
 	exit(EXIT_FAILURE);
 #else
+#ifndef HAMSTER_VERSION
+	ShowFatalError("No se puede obtener la version de HamsterGuard.");
+	exit(EXIT_FAILURE);
+#endif
 	ShowStatus("HamsterGuard Version: %d.%d.%d\n", HAMVER_A, HAMVER_B, HAMVER_C);
-	ShowMessage(""CL_MAGENTA"[HamsterGuard]"CL_RESET": Los módulos de HamsterGuard se han cargado exitosamente.");
+	ShowMessage(""CL_MAGENTA"[HamsterGuard]"CL_RESET": Los modulos de HamsterGuard se han cargado exitosamente.");
 #endif
 	hamster->abnormal = hamster_abnormal_start;
-	hamster->msg = hamster_msg;
 	hamster->socket_dc = hamster_socket_disconnect;
 	hamster->socket_c = hamster_socket_send;
-	
-	hamster_timer = idb_alloc(DB_OPT_BASE);
+	hamster->msg = hamster_msg;
 	
 	hamster->init();
 }
 
-static void* hamster_get(const char *name) {
-	switch (name) {
-		case "version":
-			return HAMSTER_VERSION;
-	}
-}
-
 void reload() {
 	//TODO: Recarga de database.
-	hamster->msg("La configuración se ha recargado correctamente.");
-	return 0;
+	hamster->msg("La configuracion se ha recargado correctamente.");
+	return;
 }
-void get_mac_address(int acc_id, const char *mac) {
-	sprintf(mac, "SELECT `last_mac` FROM `login` WHERE `account_id` = '%d'", acc_id);
-	return mac;
+int get_mac_address(int acc_id) {
+	char mac_address[20];
+	sprintf(mac_address, "SELECT `last_mac` FROM `login` WHERE `account_id` = '%d'", acc_id);
+	return mac_address;
 }
 
 void _FASTCALL hamster_socket_disconnect(int fd) {
@@ -84,12 +74,19 @@ void _FASTCALL hamster_socket_send(int fd, const unsigned char* buf, int lenght)
 }
 
 void _FASTCALL hamster_abnormal_start(int code) {
-	ShowFatalError("HamsterGuard ha reportado un inicio anormal. código: %d\n", code);
+	ShowFatalError("HamsterGuard ha reportado un inicio anormal. codigo: %d\n", code);
 	exit(EXIT_FAILURE);
 }
 
 void _FASTCALL hamster_msg(const char *msg) {
-	ShowMessage(""CL_MAGENTA"[Hamster_Guard]"CL_RESET": %s", msg);
+	ShowMessage(""CL_MAGENTA"[HamsterGuard]"CL_RESET": %s", msg);
 }
 
+void _FASTCALL mac_banned(const char *mac) {
+	ShowMessage(""CL_MAGENTA"[HamsterGuard]"CL_RESET": La MAC '%s' ha sido baneada.\n", mac);
+}
+
+void _FASTCALL mac_unbanned(const char *mac) {
+	ShowMessage(""CL_MAGENTA"[HamsterGuard]"CL_RESET": La MAC '%s' ha sido desbaneada.\n", mac);
+}
 

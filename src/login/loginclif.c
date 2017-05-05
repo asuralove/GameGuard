@@ -429,7 +429,7 @@ static int logclif_parse_reqcharconnec(int fd, struct login_session_data *sd, ch
 
 		ShowInfo("Connection request of the char-server '%s' @ %u.%u.%u.%u:%u (account: '%s', pass: '%s', ip: '%s')\n", server_name, CONVIP(server_ip), server_port, sd->userid, sd->passwd, ip);
 		sprintf(message, "charserver - %s@%u.%u.%u.%u:%u", server_name, CONVIP(server_ip), server_port);
-		login_log(session[fd]->client_addr, sd->userid, 100, message);
+		login_log(session[fd]->client_addr, sd->userid, 100, message, "");
 
 		result = login_mmo_auth(sd, true);
 		if( runflag == LOGINSERVER_ST_RUNNING &&
@@ -495,7 +495,7 @@ int logclif_parse(int fd) {
 		if( login_config.ipban && ipban_check(ipl) )
 		{
 			ShowStatus("Connection refused: IP isn't authorised (deny/allow, ip: %s).\n", ip);
-			login_log(ipl, "unknown", -3, "ip banned");
+			login_log(ipl, "unknown", -3, "ip banned", "");
 			WFIFOHEAD(fd,23);
 			WFIFOW(fd,0) = 0x6a;
 			WFIFOB(fd,2) = 3; // 3 = Rejected from Server
