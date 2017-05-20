@@ -19,9 +19,7 @@
 #include "npc.h"
 #include "hamster.h"
 
-void _FASTCALL hamster_action_request(int fd, int task, int id, intptr data);
 void _FASTCALL hamster_log(int fd, const char *msg);
-static int hamster_group_register_timer(int tid, unsigned int tick, int id, intptr data);
 
 static SqlStmt* log_stmt = NULL;
 static SqlStmt* ban_stmt = NULL;
@@ -39,7 +37,7 @@ void hamster_init() {
 	}
 
 	if (mmysql_handle == NULL) {
-		ShowFatalError("HamsterGuard: ¡No se ha iniciado el SQL!\n");
+		ShowFatalError("HamsterGuard: No se ha iniciado el SQL!\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -50,7 +48,7 @@ void hamster_init() {
 		exit(EXIT_FAILURE);
 	}
 
-	hamster->msg("Conectado a la SQL de HamsterGuard correctamente.");
+	hamster_msg("Conectado a la SQL de HamsterGuard correctamente.");
 }
 
 void hamster_final() {
@@ -155,8 +153,8 @@ void _FASTCALL hamster_action_request(int fd, int task, int id, intptr data) {
 				*(short*)data = sd->status.class_;
 				break;
 			default:
-				ShowError("HamsterGuard ha hecho una petición errónea (ID=%d)\n", id);
-				ShowError("Estás usando una versión incompatible del GameGuard.\n");
+				ShowError("HamsterGuard ha hecho una peticion erronea (ID=%d)\n", id);
+				ShowError("Estas usando una version incompatible del GameGuard.\n");
 				break;
 			}
 			break;
@@ -166,14 +164,16 @@ void _FASTCALL hamster_action_request(int fd, int task, int id, intptr data) {
 				if (nd) {
 					run_script(nd->u.scr.script, 0, sd->bl.id, fake_nd->bl.id);
 				} else {
-					ShowError("Una acción de HamsterGuard está intentando ejecutar un script inexistente '%s'\n", data);
+					ShowError("Una accion de HamsterGuard esta intentando ejecutar un script inexistente '%s'\n", data);
 				}
 			}
 			break;
 		default:
-			ShowError("HamsterGuard ha hecho una petición errónea (ID=%d)\n", task);
-			ShowError("Estás usando una versión incompatible del GameGuard.\n");
+			ShowError("HamsterGuard ha hecho una peticion erronea (ID=%d)\n", task);
+			ShowError("Estas usando una version incompatible del GameGuard.\n");
 			break;
 	}
 }
+
+
 

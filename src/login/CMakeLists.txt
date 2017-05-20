@@ -10,6 +10,7 @@ message( STATUS "Creating target login-server" )
 set( LOGIN_HEADERS
 	"${LOGIN_SOURCE_DIR}/account.h"
 	"${LOGIN_SOURCE_DIR}/ipban.h"
+	"${LOGIN_SOURCE_DIR}/macban.h"
 	"${LOGIN_SOURCE_DIR}/login.h"
 	"${LOGIN_SOURCE_DIR}/loginclif.h"
 	"${LOGIN_SOURCE_DIR}/loginchrif.h"
@@ -19,6 +20,7 @@ set( LOGIN_HEADERS
 set( LOGIN_SOURCES
 	"${LOGIN_SOURCE_DIR}/account.c"
 	"${LOGIN_SOURCE_DIR}/ipban.c"
+	"${LOGIN_SOURCE_DIR}/macban.c"
 	"${LOGIN_SOURCE_DIR}/login.c"
 	"${LOGIN_SOURCE_DIR}/loginclif.c"
 	"${LOGIN_SOURCE_DIR}/loginchrif.c"

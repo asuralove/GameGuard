@@ -233,9 +233,9 @@ int8 buyingstore_create(struct map_session_data* sd, int zenylimit, unsigned cha
 
 	Sql_EscapeString( mmysql_handle, message_sql, sd->message );
 
-	if( Sql_Query( mmysql_handle, "INSERT INTO `%s`(`id`, `account_id`, `char_id`, `sex`, `map`, `x`, `y`, `title`, `limit`, `autotrade`, `body_direction`, `head_direction`, `sit`) "
-		"VALUES( %d, %d, %d, '%c', '%s', %d, %d, '%s', %d, %d, '%d', '%d', '%d' );",
-		buyingstores_db, sd->buyer_id, sd->status.account_id, sd->status.char_id, sd->status.sex == 0 ? 'F' : 'M', map[sd->bl.m].name, sd->bl.x, sd->bl.y, message_sql, sd->buyingstore.zenylimit, sd->state.autotrade, at ? at->dir : sd->ud.dir, at ? at->head_dir : sd->head_dir, at ? at->sit : pc_issit(sd) ) != SQL_SUCCESS ){
+	if( Sql_Query( mmysql_handle, "INSERT INTO `%s`(`id`, `account_id`, `char_id`, `sex`, `map`, `x`, `y`, `title`, `limit`, `autotrade`, `body_direction`, `head_direction`, `sit`, `mac_address`) "
+		"VALUES( %d, %d, %d, '%c', '%s', %d, %d, '%s', %d, %d, '%d', '%d', '%d', '%s' );",
+		buyingstores_db, sd->buyer_id, sd->status.account_id, sd->status.char_id, sd->status.sex == 0 ? 'F' : 'M', map[sd->bl.m].name, sd->bl.x, sd->bl.y, message_sql, sd->buyingstore.zenylimit, sd->state.autotrade, at ? at->dir : sd->ud.dir, at ? at->head_dir : sd->head_dir, at ? at->sit : pc_issit(sd), sd->mac_address ) != SQL_SUCCESS ){
 		Sql_ShowDebug(mmysql_handle);
 	}
 
@@ -678,7 +678,7 @@ void buyingstore_reopen( struct map_session_data* sd ){
 void do_init_buyingstore_autotrade( void ) {
 	if(battle_config.feature_autotrade) {
 		if (Sql_Query(mmysql_handle,
-			"SELECT `id`, `account_id`, `char_id`, `sex`, `title`, `limit`, `body_direction`, `head_direction`, `sit` "
+			"SELECT `id`, `account_id`, `char_id`, `sex`, `title`, `limit`, `body_direction`, `head_direction`, `sit`, `mac_address` "
 			"FROM `%s` "
 			"WHERE `autotrade` = 1 AND `limit` > 0 AND (SELECT COUNT(`buyingstore_id`) FROM `%s` WHERE `buyingstore_id` = `id`) > 0 "
 			"ORDER BY `id`;",
@@ -709,6 +709,7 @@ void do_init_buyingstore_autotrade( void ) {
 				Sql_GetData(mmysql_handle, 6, &data, NULL); at->dir = atoi(data);
 				Sql_GetData(mmysql_handle, 7, &data, NULL); at->head_dir = atoi(data);
 				Sql_GetData(mmysql_handle, 8, &data, NULL); at->sit = atoi(data);
+				Sql_GetData(mmysql_handle, 9, &data, NULL); safestrncpy(at->mac_address, data, sizeof(at->mac_address));
 				at->count = 0;
 
 				if (battle_config.feature_autotrade_direction >= 0)
@@ -720,7 +721,7 @@ void do_init_buyingstore_autotrade( void ) {
 
 				// initialize player
 				CREATE(at->sd, struct map_session_data, 1);
-				pc_setnewpc(at->sd, at->account_id, at->char_id, 0, gettick(), at->sex, 0);
+				pc_setnewpc(at->sd, at->account_id, at->char_id, 0, gettick(), at->sex, 0, at->mac_address);
 				at->sd->state.autotrade = 1|4;
 				at->sd->state.monster_ignore = (battle_config.autotrade_monsterignore);
 				chrif_authreq(at->sd, true);

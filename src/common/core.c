@@ -283,25 +283,19 @@ const char *get_git_hash (void) {
  *  ASCII By CalciumKid 1/12/2011
  *--------------------------------------*/
 static void display_title(void) {
-	const char* svn = get_svn_revision();
-	const char* git = get_git_hash();
 
 	ShowMessage("\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"                                                                 "CL_PASS""CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_PASS"       "CL_BT_WHITE"            rAthena Development Team presents                  "CL_PASS""CL_CLL""CL_NORMAL"\n");
+	ShowMessage(""CL_PASS"       "CL_BT_WHITE"              DanielArt rAthena Modified                       "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"                 ___   __  __                                    "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"           _____/   | / /_/ /_  ___  ____  ____ _                "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"          / ___/ /| |/ __/ __ \\/ _ \\/ __ \\/ __ `/                "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"         / /  / ___ / /_/ / / /  __/ / / / /_/ /                 "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"        /_/  /_/  |_\\__/_/ /_/\\___/_/ /_/\\__,_/                  "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"                                                                 "CL_PASS""CL_CLL""CL_NORMAL"\n");
-	ShowMessage(""CL_PASS"       "CL_GREEN"              http://rathena.org/board/                        "CL_PASS""CL_CLL""CL_NORMAL"\n");
+	ShowMessage(""CL_PASS"       "CL_GREEN"               https://danielart.com.mx                        "CL_PASS""CL_CLL""CL_NORMAL"\n");
 	ShowMessage(""CL_PASS"     "CL_BOLD"                                                                 "CL_PASS""CL_CLL""CL_NORMAL"\n");
-
-	if( svn[0] != UNKNOWN_VERSION )
-		ShowInfo("SVN Revision: '"CL_WHITE"%s"CL_RESET"'\n", svn);
-	else if( git[0] != UNKNOWN_VERSION )
-		ShowInfo("Git Hash: '"CL_WHITE"%s"CL_RESET"'\n", git);
+	ShowInfo("Emulator Version: '"CL_WHITE"%d"CL_RESET"'\n", HAMSTER_EMU_VER);
 }
 
 // Warning if executed as superuser (root)
@@ -309,7 +303,7 @@ void usercheck(void)
 {
 #ifndef _WIN32
     if (geteuid() == 0) {
-		ShowWarning ("You are running rAthena with root privileges, it is not necessary.\n");
+		ShowWarning ("Please run the emulator without root, for example 'ragnarok' user.\n");
     }
 #endif
 }

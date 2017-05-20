@@ -25,6 +25,7 @@
 #include "../config/core.h"
 #include "account.h"
 #include "ipban.h"
+#include "macban.h"
 #include "login.h"
 #include "loginlog.h"
 #include "loginclif.h"
@@ -56,9 +57,6 @@ int login_fd; // login server file descriptor socket
 
 //early declaration
 bool login_check_password(const char* md5key, int passwdenc, const char* passwd, const char* refpass);
-
-//mac banned
-bool _FASTCALL check_mac_banned(const int8 *mac);
 
 ///Accessors
 AccountDB* login_get_accounts_db(void){
@@ -287,9 +285,9 @@ int login_mmo_auth(struct login_session_data* sd, bool isServer) {
 	ip2str(session[sd->fd]->client_addr, ip);
 
 	// Mac Banned
-	if( hamster->is_mac_banned(acc.mac_address) ) {
+	if( macban_check(acc.mac_address) ) {
 		ShowNotice("La MAC '%s' se ha intentado conectar, pero esta bloqueada.", acc.mac_address);
-		hamster->msg("MAC baneada. Conexion rechazada.");
+		hamster_msg("MAC baneada. Conexion rechazada.");
 		return 6;
 	}
 
@@ -392,13 +390,13 @@ int login_mmo_auth(struct login_session_data* sd, bool isServer) {
 			for( i = 0; i < 16; i++ )
 				sprintf(&smd5[i * 2], "%02x", sd->client_hash[i]);
 
-			ShowNotice("Invalid client hash (account: %s, pass: %s, sent md5: %d, ip: %s)\n", sd->userid, sd->passwd, smd5, ip);
+			ShowNotice("Invalid client hash (account: %s, pass: %s, sent md5: %d, ip: %s, mac: %s)\n", sd->userid, sd->passwd, smd5, ip, acc.mac_address);
 			return 5;
 		}
 	}
 
-	ShowNotice("Authentication accepted (account: %s, id: %d, ip: %s, mac: %s)\n", sd->userid, acc.account_id, ip, acc.mac_address);
-
+	ShowNotice("Authentication accepted (account: '"CL_WHITE"%s"CL_RESET"', id: '"CL_WHITE"%d"CL_RESET"', ip: '"CL_WHITE"%s"CL_RESET"', mac: '"CL_WHITE"%s"CL_RESET"')\n", sd->userid, acc.account_id, ip, acc.mac_address);
+	hamster_validate_connection(acc.mac_address);
 	// update session data
 	sd->account_id = acc.account_id;
 	sd->login_id1 = rnd() + 1;
@@ -683,6 +681,7 @@ bool login_config_read(const char* cfgName, bool normal) {
 			// try others
 			ipban_config_read(w1, w2);
 			loginlog_config_read(w1, w2);
+			hamster_config_read(w1, w2);
 		}
 	}
 	fclose(fp);
@@ -762,6 +761,7 @@ void do_final(void) {
 
 	do_final_msg();
 	ipban_final();
+	macban_final();
 	do_final_loginclif();
 	do_final_logincnslif();
 
@@ -799,10 +799,6 @@ void do_shutdown(void) {
 		flush_fifos();
 		runflag = CORE_ST_STOP;
 	}
-}
-
-bool _FASTCALL check_mac_banned(const int8 *mac) {
-	return accounts->is_mac_banned(accounts, (const char *)mac);
 }
 
 /**
@@ -855,6 +851,9 @@ int do_init(int argc, char** argv) {
 	// initialize static and dynamic ipban system
 	ipban_init();
 
+	// mac ban
+	macban_init();
+
 	// Online user database init
 	online_db = idb_alloc(DB_OPT_RELEASE_DATA);
 	add_timer_func_list(login_waiting_disconnect_timer, "waiting_disconnect_timer");
@@ -879,8 +878,6 @@ int do_init(int argc, char** argv) {
 			exit(EXIT_FAILURE);
 		}
 	}
-
-	hamster->is_mac_banned = check_mac_banned;
 
 	// server port open & binding
 	if( (login_fd = make_listen_bind(login_config.login_ip,login_config.login_port)) == -1 ) {

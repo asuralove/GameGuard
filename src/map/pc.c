@@ -11,7 +11,8 @@
 #include "../common/strlib.h" // safestrncpy()
 #include "../common/timer.h"
 #include "../common/utils.h"
-#include "../common/mmo.h" //NAME_LENGTH
+#include "../common/mmo.h" //NAME_LENGTH & MAC
+#include "../common/hamster.h"
 
 #include "atcommand.h" // get_atcommand_level()
 #include "map.h"
@@ -48,6 +49,7 @@
 #include "region.h"
 #include "storage.h"
 #include "mapreg.h"
+#include "hamster.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1182,13 +1184,14 @@ void pc_makesavestatus(struct map_session_data *sd) {
 /*==========================================
  * Off init ? Connection?
  *------------------------------------------*/
-void pc_setnewpc(struct map_session_data *sd, uint32 account_id, uint32 char_id, int login_id1, unsigned int client_tick, int sex, int fd) {
+void pc_setnewpc(struct map_session_data *sd, uint32 account_id, uint32 char_id, int login_id1, unsigned int client_tick, int sex, int fd, char* mac_address) {
 	nullpo_retv(sd);
 
 	sd->bl.id = account_id;
 	sd->status.account_id = account_id;
 	sd->status.char_id = char_id;
 	sd->status.sex = sex;
+	sd->status.mac_address = mac_address;
 	sd->login_id1 = login_id1;
 	sd->login_id2 = 0; // at this point, we can not know the value :(
 	sd->client_tick = client_tick;
@@ -1819,14 +1822,14 @@ bool pc_authok(struct map_session_data *sd, uint32 login_id2, time_t expiration_
 
 	//Prevent S. Novices from getting the no-death bonus just yet. [Skotlex]
 	sd->die_counter=-1;
-
+	
 	//display login notice
 	ShowInfo("'"CL_WHITE"%s"CL_RESET"' logged in."
 	         " (AID/CID: '"CL_WHITE"%d/%d"CL_RESET"',"
 	         " Packet Ver: '"CL_WHITE"%d"CL_RESET"', IP: '"CL_WHITE"%d.%d.%d.%d"CL_RESET"',"
-	         " Group '"CL_WHITE"%d"CL_RESET"').\n",
+	         " MAC: '"CL_WHITE"%s"CL_RESET"', Group: '"CL_WHITE"%d"CL_RESET"').\n",
 	         sd->status.name, sd->status.account_id, sd->status.char_id,
-	         sd->packet_ver, CONVIP(ip), sd->group_id);
+	         sd->packet_ver, CONVIP(ip), sd->status.mac_address, sd->group_id);
 	// Send friends list
 	clif_friendslist_send(sd);
 

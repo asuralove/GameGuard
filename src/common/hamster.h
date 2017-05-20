@@ -1,9 +1,11 @@
 #ifndef _HAMSTERCORE_H
 #define _HAMSTERCORE_H
+
 void do_hamster_final();
 void do_hamster_init();
 
-extern struct HAMSTER_CORE *hamster;
+extern struct HAMSTER_CORE *HamsterData;
+extern struct Hamster_Config hamster_config;
 
 #ifdef HAMSTERGUARD
 	#define HAMVER_A 4
@@ -29,12 +31,6 @@ extern struct HAMSTER_CORE *hamster;
 	#define _FASTCALL __attribute__((fastcall))
 #endif
 
-#define HAMSTER_CALL(name, rettype, args) rettype (_FASTCALL * name)args
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 enum {
 	HAMSTER_UNKNOWN = 0,
 	HAMSTER_JAIL,
@@ -56,26 +52,29 @@ enum {
 	HAMID_GM,
 };
 
-#pragma pack(push, 1)
 struct HAMSTER_CORE {
-	HAMSTER_CALL(init, void, (void));
-	HAMSTER_CALL(final, void, (void));
-	HAMSTER_CALL(reload, void, (void));
-	HAMSTER_CALL(is_mac_banned, bool, (const char *mac));
-	HAMSTER_CALL(mac_banned, void, (const char *mac));
-	HAMSTER_CALL(mac_unbanned, void, (const char *mac));
-	HAMSTER_CALL(action_request, void, (int fd, int task, int id, intptr data));
-	HAMSTER_CALL(socket_dc, void, (int fd));
-	HAMSTER_CALL(socket_c, void, (int fd, const unsigned char* buf, int length));
-	HAMSTER_CALL(player_log, void, (int fd, const char *msg));
-	HAMSTER_CALL(msg, void, (const char*));
-	HAMSTER_CALL(get_mac_address, int, (int acc_id));
-	HAMSTER_CALL(abnormal, void, (int code));
+	char mac_address[20];
+	int ip;
+	int player_log;
 };
-#pragma pack(pop)
 
-#ifdef __cplusplus	
-}
-#endif
+struct Hamster_Config {
+	int macban;
+	const char macban_db_username[32];
+	const char macban_db_password[32];
+	const char macban_db_hostname[32];
+	int macban_db_port;
+	const char macban_db_database[32];
+	const char macban_db_codepage[32];
+};
+
+void hamster_reload();
+int hamster_macban(const char *mac);
+void hamster_mac_banned(const char *mac);
+void hamster_mac_unbanned(const char *mac);
+void hamster_validate_connection(const char *mac);
+void hamster_msg(const char*);
+void do_hamster_final();
+void do_hamster_init();
 
 #endif

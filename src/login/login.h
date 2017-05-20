@@ -98,6 +98,13 @@ struct Login_Config {
 	int allowed_regs;								/// max number of registration
 	int time_allowed;								/// registration interval in seconds
 
+	int macban;
+	char hamster_db_username[32];
+	char hamster_db_password[32];
+	char hamster_db_hostname[32];
+	int hamster_db_port;
+	char hamster_db_database[32];
+
 	int client_hash_check;							/// flags for checking client md5
 	struct client_hash_node *client_hash_nodes;		/// linked list containing md5 hash for each gm group
 	char loginconf_name[256];						/// name of main config file

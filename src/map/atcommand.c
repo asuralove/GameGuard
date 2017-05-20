@@ -9,11 +9,14 @@
 #include "../common/showmsg.h"
 #include "../common/malloc.h"
 #include "../common/random.h"
+#include "../common/sql.h"
 #include "../common/socket.h"
 #include "../common/strlib.h"
 #include "../common/utils.h"
 #include "../common/conf.h"
 #include "../common/hamster.h"
+
+#include "../login/macban.h"
 
 #include "map.h"
 #include "atcommand.h"
@@ -170,13 +173,14 @@ ACMD_FUNC(macban)
 		char comment[60];
 		*comment = 0;
 
-		if (!message || !*message || sscanf(message, "%2x:%2x:%2x:%2x:%2x:%2x %59[^\n]", &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], comment) < 6) {
+		if (!message || !*message || sscanf(message, "%2x-%2x-%2x-%2x-%2x-%2x %59[^\n]", &d[0], &d[1], &d[2], &d[3], &d[4], &d[5], comment) < 6) {
 			clif_displaymessage(fd, "Sintaxis incorrecta, usa '@macban <dirección MAC> [<comentario>]' o '#macban <nombre del jugador> [<comentario>]'");
+			clif_displaymessage(fd, "Formato de MAC: XX-XX-XX-XX-XX-XX, ejemplo: '@macban 5F-3D-04-49-D3-4E'.");
 			return 1;
 		}
 
-		safesnprintf(mac_address, sizeof(mac_address), "%02x:%02x:%02x:%02x:%02x:%02x", d[0], d[1], d[2], d[3], d[4], d[5]);
-		len = safesnprintf(mac_buf, sizeof(mac_buf)/2, "%s (%u) baneado %s : %s", src_sd->status.name, src_sd->status.account_id, mac_address, strlen(comment) > 1 ? comment : "(sin comentario)");
+		safesnprintf(mac_address, sizeof(mac_address), "%02x-%02x-%02x-%02x-%02x-%02x", d[0], d[1], d[2], d[3], d[4], d[5]);
+		len = safesnprintf(mac_buf, sizeof(mac_buf)/2, "%s (%u) ha baneado la MAC '%s' : %s", src_sd->status.name, src_sd->status.account_id, mac_address, strlen(comment) > 1 ? comment : "(sin comentario)");
 	} else {
 		sprintf(atcmd_output, "No se ha podido banear la MAC %s.", mac_address);
 		clif_displaymessage(fd, atcmd_output);
@@ -190,7 +194,7 @@ ACMD_FUNC(macban)
 		Sql_ShowDebug(mmysql_handle);
 		return 1;
 	}
-	hamster->mac_banned(mac_address);
+	hamster_mac_banned(mac_address);
 	sprintf(atcmd_output, "Prohibido el acceso a la MAC %s.", mac_address);
 	clif_displaymessage(fd, atcmd_output);
 	return 0;
@@ -217,22 +221,17 @@ ACMD_FUNC(unbanmac)
 		return 1;
 	}
 
-	sprintf(atcmd_output, "DELETE FROM `mac_bans` WHERE `mac` LIKE '%s'", buf);
-	if( SQL_ERROR == Sql_QueryStr(mmysql_handle, atcmd_output) )
-	{
-		Sql_ShowDebug(mmysql_handle);
-		return 1;
-	}
+	hamster_macban(buf);
 
-	hamster->mac_unbanned(message);
+	hamster_mac_unbanned(message);
 	sprintf(atcmd_output, "Acceso permitido a la MAC '%s'.", message);
 	clif_displaymessage(fd, atcmd_output);
 	return 0;
 }
 /*==========================================
- * @macs (Muestra las MAC baneadas)
+ * @bannedmac (Muestra las MAC baneadas)
  *------------------------------------------*/
-ACMD_FUNC(macs)
+ACMD_FUNC(bannedmac)
 {
 	SqlStmt* stmt = SqlStmt_Malloc(mmysql_handle);
 	char mac_address[20];
@@ -260,21 +259,20 @@ ACMD_FUNC(macs)
 	return 0;
 }
 /*==========================================
- * @showmac (muestra la MAC e IP de un usuario)
+ * @macip (muestra la MAC e IP de un usuario)
  *------------------------------------------*/
-ACMD_FUNC(showmac)
+ACMD_FUNC(showmacip)
 {
 	uint32 ip;
 	
 	nullpo_retr(-1,sd);
-	sprintf(atcmd_output, "Se ha solicitado información para %sd (AID %d | CID %d", sd->status.name, sd->status.account_id, sd->status.char_id);
-	clif_displaymessage(fd,atcmd_output);
-	sprintf(atcmd_output, "- Dirección MAC : %d", hamster->get_mac_address(sd->status.account_id));
+	sprintf(atcmd_output, "Se ha solicitado información para %sd (AID %d | CID %d)", sd->status.name, sd->status.account_id, sd->status.char_id);
 	clif_displaymessage(fd,atcmd_output);
 	ip = session[sd->fd]->client_addr;
 	sprintf(atcmd_output, "- Dirección IP : %d.%d.%d.%d", CONVIP(ip));
 	clif_displaymessage(fd,atcmd_output);
-	
+	sprintf(atcmd_output, "- Dirección MAC : %s", sd->status.mac_address);
+	clif_displaymessage(fd,atcmd_output);
 	return 0;
 }
 /*==========================================
@@ -282,8 +280,52 @@ ACMD_FUNC(showmac)
  *------------------------------------------*/
 ACMD_FUNC(reloadhamsterguard)
 {
-	hamster->reload();
-	clif_displaymessage(fd, "La configuración de HamsterGuard se ha recargado.");
+	nullpo_retr(-1, sd);
+	struct Battle_Config prev_config;
+	memcpy(&prev_config, &battle_config, sizeof(prev_config));
+	battle_config_read(BATTLE_CONF_FILENAME);
+	if( prev_config.item_rate_mvp          != battle_config.item_rate_mvp
+	||  prev_config.item_rate_common       != battle_config.item_rate_common
+	||  prev_config.item_rate_common_boss  != battle_config.item_rate_common_boss
+	||  prev_config.item_rate_common_mvp   != battle_config.item_rate_common_mvp
+	||  prev_config.item_rate_card         != battle_config.item_rate_card
+	||  prev_config.item_rate_card_boss    != battle_config.item_rate_card_boss
+	||  prev_config.item_rate_card_mvp     != battle_config.item_rate_card_mvp
+	||  prev_config.item_rate_equip        != battle_config.item_rate_equip
+	||  prev_config.item_rate_equip_boss   != battle_config.item_rate_equip_boss
+	||  prev_config.item_rate_equip_mvp    != battle_config.item_rate_equip_mvp
+	||  prev_config.item_rate_heal         != battle_config.item_rate_heal
+	||  prev_config.item_rate_heal_boss    != battle_config.item_rate_heal_boss
+	||  prev_config.item_rate_heal_mvp     != battle_config.item_rate_heal_mvp
+	||  prev_config.item_rate_use          != battle_config.item_rate_use
+	||  prev_config.item_rate_use_boss     != battle_config.item_rate_use_boss
+	||  prev_config.item_rate_use_mvp      != battle_config.item_rate_use_mvp
+	||  prev_config.item_rate_treasure     != battle_config.item_rate_treasure
+	||  prev_config.item_rate_adddrop      != battle_config.item_rate_adddrop
+	||  prev_config.logarithmic_drops      != battle_config.logarithmic_drops
+	||  prev_config.item_drop_common_min   != battle_config.item_drop_common_min
+	||  prev_config.item_drop_common_max   != battle_config.item_drop_common_max
+	||  prev_config.item_drop_card_min     != battle_config.item_drop_card_min
+	||  prev_config.item_drop_card_max     != battle_config.item_drop_card_max
+	||  prev_config.item_drop_equip_min    != battle_config.item_drop_equip_min
+	||  prev_config.item_drop_equip_max    != battle_config.item_drop_equip_max
+	||  prev_config.item_drop_mvp_min      != battle_config.item_drop_mvp_min
+	||  prev_config.item_drop_mvp_max      != battle_config.item_drop_mvp_max
+	||  prev_config.item_drop_heal_min     != battle_config.item_drop_heal_min
+	||  prev_config.item_drop_heal_max     != battle_config.item_drop_heal_max
+	||  prev_config.item_drop_use_min      != battle_config.item_drop_use_min
+	||  prev_config.item_drop_use_max      != battle_config.item_drop_use_max
+	||  prev_config.item_drop_treasure_min != battle_config.item_drop_treasure_min
+	||  prev_config.item_drop_treasure_max != battle_config.item_drop_treasure_max
+	||  prev_config.base_exp_rate          != battle_config.base_exp_rate
+	||  prev_config.job_exp_rate           != battle_config.job_exp_rate
+	)
+	{	// Exp or Drop rates changed.
+		mob_reload(); //Needed as well so rate changes take effect.
+		chrif_ragsrvinfo(battle_config.base_exp_rate, battle_config.job_exp_rate, battle_config.item_rate_common);
+	}
+	battle_config.anti_mayapurple_hack = prev_config.anti_mayapurple_hack; // It can cause serius problems if we change this setting while server is UP.
+	hamster_reload();
 	return 0;
 }
 /*==========================================
@@ -11873,8 +11915,8 @@ void atcommand_basecommands(void) {
 #include "../custom/atcommand_def.inc"
 		ACMD_DEF(macban),
 		ACMD_DEF(unbanmac),
-		ACMD_DEF(macs),
-		ACMD_DEF(showmac),
+		ACMD_DEF(bannedmac),
+		ACMD_DEF(showmacip),
 		ACMD_DEF(reloadhamsterguard),
 		ACMD_DEF2R("warp", mapmove, ATCMD_NOCONSOLE),
 		ACMD_DEF(where),

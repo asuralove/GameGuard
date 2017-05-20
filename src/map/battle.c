@@ -8439,6 +8439,8 @@ static const struct _battle_data {
 	{ "cashshop_show_points",               &battle_config.cashshop_show_points,            0,      0,      1,              },
 	{ "mail_show_status",                   &battle_config.mail_show_status,                0,      0,      2,              },
 	{ "client_limit_unit_lv",               &battle_config.client_limit_unit_lv,            0,      0,      BL_ALL,         },
+// HamsterGuard
+	{ "hamster_db_port",			&battle_config.hamster_db_port,		     3306,      0,      INT_MAX,        },
 // [Flood Protection - Automute]
 	{ "chat_allowed_per_interval",          &battle_config.chat_allowed_per_interval,       0,      0,      INT_MAX,        },
 	{ "chat_time_interval",                 &battle_config.chat_time_interval,              0,      0,      INT_MAX,        },

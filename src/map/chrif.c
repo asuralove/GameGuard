@@ -558,6 +558,7 @@ static int chrif_reconnect(DBKey key, DBData *data, va_list ap) {
 
 /// Called when all the connection steps are completed.
 void chrif_on_ready(void) {
+	hamster_msg("Conectado correctamente, esperando conexiones de usuarios.");
 	ShowStatus("Map Server is now online.\n");
 
 	chrif_state = 2;

@@ -544,6 +544,7 @@ struct mmo_charstatus {
 	uint32 father;
 	uint32 mother;
 	uint32 child;
+	char mac_address;
 
 	unsigned int base_exp,job_exp;
 	int zeny;

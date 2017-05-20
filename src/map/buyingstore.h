@@ -36,6 +36,7 @@ struct s_autotrader {
 	uint32 id; ///< vendor/buyer id
 	uint32 account_id; ///< Account ID
 	uint32 char_id; ///< Char ID
+	char mac_address[20];
 	int m; ///< Map location
 	uint16 x, ///< X location
 		y; ///< Y location

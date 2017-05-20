@@ -515,6 +515,14 @@ extern struct Battle_Config
 	int hom_S_max_level;
 	int hom_S_growth_level;
 
+	// HamsterGuard [DanielArt]
+	char hamster_db_username;
+	char hamster_db_password;
+	char hamster_db_hostname;
+	int hamster_db_port;
+	char hamster_db_database;
+	int macban;
+
 	// [Flood Protection - Automute]
 	int chat_allowed_per_interval;
 	int chat_time_interval;

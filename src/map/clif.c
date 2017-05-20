@@ -10564,7 +10564,7 @@ void clif_parse_WantToConnection(int fd, struct map_session_data* sd)
 {
 	struct block_list* bl;
 	struct auth_node* node;
-	int cmd, account_id, char_id, login_id1, sex;
+	int cmd, account_id, mac_address, char_id, login_id1, sex;
 	unsigned int client_tick; //The client tick is a tick, therefore it needs be unsigned. [Skotlex]
 	int packet_ver;	// 5: old, 6: 7july04, 7: 13july04, 8: 26july04, 9: 9aug04/16aug04/17aug04, 10: 6sept04, 11: 21sept04, 12: 18oct04, 13: 25oct04 (by [Yor])
 
@@ -10582,6 +10582,7 @@ void clif_parse_WantToConnection(int fd, struct map_session_data* sd)
 	login_id1   = RFIFOL(fd, packet_db[packet_ver][cmd].pos[2]);
 	client_tick = RFIFOL(fd, packet_db[packet_ver][cmd].pos[3]);
 	sex         = RFIFOB(fd, packet_db[packet_ver][cmd].pos[4]);
+	mac_address = sd->mac_address;
 
 	if( packet_ver < 5 || // reject really old client versions
 	    (packet_ver <= 9 && (battle_config.packet_ver_flag & 1) == 0) || // older than 6sept04
@@ -10630,7 +10631,7 @@ void clif_parse_WantToConnection(int fd, struct map_session_data* sd)
 #endif
 	session[fd]->session_data = sd;
 
-	pc_setnewpc(sd, account_id, char_id, login_id1, client_tick, sex, fd);
+	pc_setnewpc(sd, account_id, char_id, mac_address, login_id1, client_tick, sex, fd);
 
 #if PACKETVER < 20070521
 	WFIFOHEAD(fd,4);
