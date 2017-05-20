@@ -396,7 +396,9 @@ int login_mmo_auth(struct login_session_data* sd, bool isServer) {
 	}
 
 	ShowNotice("Authentication accepted (account: '"CL_WHITE"%s"CL_RESET"', id: '"CL_WHITE"%d"CL_RESET"', ip: '"CL_WHITE"%s"CL_RESET"', mac: '"CL_WHITE"%s"CL_RESET"')\n", sd->userid, acc.account_id, ip, acc.mac_address);
-	hamster_validate_connection(acc.mac_address);
+		hamster_validate_connection(acc.mac_address);
+	else
+		hamster_msg("No se puede obtener la MAC de la conexion realizada.");
 	// update session data
 	sd->account_id = acc.account_id;
 	sd->login_id1 = rnd() + 1;
